@@ -11,7 +11,10 @@ import (
 )
 
 func GetApplication(client *gate.GatewayClient, applicationName string, dest interface{}) error {
-	app, resp, err := client.ApplicationControllerApi.GetApplicationUsingGET(client.Context, applicationName, map[string]interface{}{})
+	app, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
+		return client.ApplicationControllerApi.GetApplicationUsingGET(client.Context, applicationName, map[string]interface{}{})
+	})
+
 	if resp != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return fmt.Errorf("Application '%s' not found\n", applicationName)
@@ -32,7 +35,6 @@ func GetApplication(client *gate.GatewayClient, applicationName string, dest int
 }
 
 func CreateApplication(client *gate.GatewayClient, applicationName, email string) error {
-
 	app := map[string]interface{}{
 		"instancePort": 80,
 		"name":         applicationName,
@@ -45,7 +47,10 @@ func CreateApplication(client *gate.GatewayClient, applicationName, email string
 		"description": fmt.Sprintf("Create Application: %s", applicationName),
 	}
 
-	ref, _, err := client.TaskControllerApi.TaskUsingPOST1(client.Context, createAppTask)
+	ref, _, err := retry(func() (map[string]interface{}, *http.Response, error) {
+		return client.TaskControllerApi.TaskUsingPOST1(client.Context, createAppTask)
+	})
+
 	if err != nil {
 		return err
 	}
@@ -53,13 +58,18 @@ func CreateApplication(client *gate.GatewayClient, applicationName, email string
 	toks := strings.Split(ref["ref"].(string), "/")
 	id := toks[len(toks)-1]
 
-	task, resp, err := client.TaskControllerApi.GetTaskUsingGET1(client.Context, id)
+	task, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
+		return client.TaskControllerApi.GetTaskUsingGET1(client.Context, id)
+	})
+
 	attempts := 0
 	for (task == nil || !taskCompleted(task)) && attempts < 5 {
 		toks := strings.Split(ref["ref"].(string), "/")
 		id := toks[len(toks)-1]
 
-		task, resp, err = client.TaskControllerApi.GetTaskUsingGET1(client.Context, id)
+		task, resp, err = retry(func() (map[string]interface{}, *http.Response, error) {
+			return client.TaskControllerApi.GetTaskUsingGET1(client.Context, id)
+		})
 		attempts += 1
 		time.Sleep(time.Duration(attempts*attempts) * time.Second)
 	}
@@ -91,7 +101,9 @@ func DeleteAppliation(client *gate.GatewayClient, applicationName string) error 
 		"description": fmt.Sprintf("Delete Application: %s", applicationName),
 	}
 
-	_, resp, err := client.TaskControllerApi.TaskUsingPOST1(client.Context, deleteAppTask)
+	_, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
+		return client.TaskControllerApi.TaskUsingPOST1(client.Context, deleteAppTask)
+	})
 
 	if err != nil {
 		return err
