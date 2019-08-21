@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-)
-import (
+
 	"github.com/mitchellh/mapstructure"
 	gate "github.com/spinnaker/spin/cmd/gateclient"
 )
@@ -99,4 +98,16 @@ func DeletePipeline(client *gate.GatewayClient, applicationName, pipelineName st
 	}
 	log.Printf("deleted pipeline %v for application %v", pipelineName, applicationName)
 	return nil
+}
+
+// RecreatePipeline is a convenience function for deleting and subsequently
+// recreating a pipeline. It will return an error if either of the delete and
+// create operations fails.
+func RecreatePipeline(client *gate.GatewayClient, applicationName, pipelineName string, pipeline interface{}) error {
+	err := DeletePipeline(client, applicationName, pipelineName)
+	if err != nil {
+		return err
+	}
+
+	return CreatePipeline(client, pipeline)
 }

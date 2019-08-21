@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/armory-io/terraform-provider-spinnaker/spinnaker/api"
+	"github.com/armory-io/terraform-provider-spinnaker/spinnaker/api/errors"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -51,18 +52,25 @@ func resourcePipelineCreate(data *schema.ResourceData, meta interface{}) error {
 	client := clientConfig.client
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
-	pipeline := data.Get("pipeline").(string)
+	rawPipeline := []byte(data.Get("pipeline").(string))
 
-	var tmp map[string]interface{}
-	if err := json.NewDecoder(strings.NewReader(pipeline)).Decode(&tmp); err != nil {
+	var pipeline map[string]interface{}
+
+	err := json.Unmarshal(rawPipeline, &pipeline)
+	if err != nil {
 		return err
 	}
 
-	tmp["application"] = applicationName
-	tmp["name"] = pipelineName
-	delete(tmp, "id")
+	pipeline["application"] = applicationName
+	pipeline["name"] = pipelineName
+	delete(pipeline, "id")
 
-	if err := api.CreatePipeline(client, tmp); err != nil {
+	err = api.CreatePipeline(client, pipeline)
+	if errors.IsPipelineAlreadyExists(err) {
+		err = api.RecreatePipeline(client, applicationName, pipelineName, pipeline)
+	}
+
+	if err != nil {
 		return err
 	}
 
@@ -104,26 +112,35 @@ func resourcePipelineUpdate(data *schema.ResourceData, meta interface{}) error {
 	client := clientConfig.client
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
-	pipeline := data.Get("pipeline").(string)
+	rawPipeline := []byte(data.Get("pipeline").(string))
 
 	pipelineID, ok := data.GetOk("pipeline_id")
 	if !ok {
 		return fmt.Errorf("No pipeline_id found to pipeline in %s with name %s", applicationName, pipelineName)
 	}
 
-	var pipe map[string]interface{}
-	err := json.Unmarshal([]byte(pipeline), &pipe)
+	var pipeline map[string]interface{}
+
+	err := json.Unmarshal(rawPipeline, &pipeline)
 	if err != nil {
 		return fmt.Errorf("could not unmarshal pipeline")
 	}
 
-	pipe["application"] = applicationName
-	pipe["name"] = pipelineName
-	pipe["id"] = pipelineID.(string)
+	pipeline["application"] = applicationName
+	pipeline["name"] = pipelineName
+	pipeline["id"] = pipelineID.(string)
 
-	if err := api.UpdatePipeline(client, pipelineID.(string), pipe); err != nil {
+	err = api.UpdatePipeline(client, pipelineID.(string), pipeline)
+	if errors.IsPipelineAlreadyExists(err) {
+		// Although it seems odd, this error can happen here due to the hideous
+		// spinnaker API. We handle it by just recreating the pipeline.
+		err = api.RecreatePipeline(client, applicationName, pipelineName, pipeline)
+	}
+
+	if err != nil {
 		return err
 	}
+
 	return resourcePipelineRead(data, meta)
 }
 
