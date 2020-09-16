@@ -22,10 +22,10 @@ func testAccPreCheck(t *testing.T) {
 	if os.Getenv("GATE_URL") == "" {
 		t.Fatal("GATE_URL must be set for acceptance tests")
 	}
-	err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
+	//err := testAccProvider.Configure(terraform.NewResourceConfig(nil))
+	//if err != nil {
+	//	t.Fatalf("err: %s", err)
+	//}
 }
 
 func TestProvider(t *testing.T) {
