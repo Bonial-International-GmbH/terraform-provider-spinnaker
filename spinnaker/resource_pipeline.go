@@ -48,15 +48,20 @@ type pipelineRead struct {
 }
 
 func resourcePipelineCreate(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
 	rawPipeline := []byte(data.Get("pipeline").(string))
 
 	var pipeline map[string]interface{}
 
-	err := json.Unmarshal(rawPipeline, &pipeline)
+	err = json.Unmarshal(rawPipeline, &pipeline)
 	if err != nil {
 		return err
 	}
@@ -78,8 +83,13 @@ func resourcePipelineCreate(data *schema.ResourceData, meta interface{}) error {
 }
 
 func resourcePipelineRead(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
 
@@ -108,8 +118,13 @@ func resourcePipelineRead(data *schema.ResourceData, meta interface{}) error {
 }
 
 func resourcePipelineUpdate(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
 	rawPipeline := []byte(data.Get("pipeline").(string))
@@ -121,7 +136,7 @@ func resourcePipelineUpdate(data *schema.ResourceData, meta interface{}) error {
 
 	var pipeline map[string]interface{}
 
-	err := json.Unmarshal(rawPipeline, &pipeline)
+	err = json.Unmarshal(rawPipeline, &pipeline)
 	if err != nil {
 		return fmt.Errorf("could not unmarshal pipeline")
 	}
@@ -145,8 +160,13 @@ func resourcePipelineUpdate(data *schema.ResourceData, meta interface{}) error {
 }
 
 func resourcePipelineDelete(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
 
@@ -158,8 +178,13 @@ func resourcePipelineDelete(data *schema.ResourceData, meta interface{}) error {
 }
 
 func resourcePipelineExists(data *schema.ResourceData, meta interface{}) (bool, error) {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return false, err
+	}
+
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
 
@@ -193,7 +218,6 @@ func pipelineDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
 }
 
 func decodeEditAndEncodePipeline(pipeline string) (encodedPipeline string, err error) {
-
 	// Decode the pipeline into a map we can edit
 	pipelineBytes := []byte(pipeline)
 	var pipelineMapGeneric interface{}

@@ -73,8 +73,12 @@ func resourcePipelineTemplateConfig() *schema.Resource {
 }
 
 func resourcePipelineTemplateConfigCreate(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
 
 	pConfig, err := buildConfig(data)
 	if err != nil {
@@ -93,8 +97,13 @@ func resourcePipelineTemplateConfigCreate(data *schema.ResourceData, meta interf
 }
 
 func resourcePipelineTemplateConfigRead(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	application := data.Get("application").(string)
 	name := data.Get("name").(string)
 
@@ -123,8 +132,13 @@ func resourcePipelineTemplateConfigRead(data *schema.ResourceData, meta interfac
 }
 
 func resourcePipelineTemplateConfigUpdate(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	pipelineID := data.Id()
 
 	pConfig, err := buildConfig(data)
@@ -141,8 +155,13 @@ func resourcePipelineTemplateConfigUpdate(data *schema.ResourceData, meta interf
 }
 
 func resourcePipelineTemplateConfigDelete(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	application := data.Get("application").(string)
 	name := data.Get("name").(string)
 
@@ -155,8 +174,13 @@ func resourcePipelineTemplateConfigDelete(data *schema.ResourceData, meta interf
 }
 
 func resourcePipelineTemplateConfigExists(data *schema.ResourceData, meta interface{}) (bool, error) {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return false, err
+	}
+
 	templateName := data.Id()
 
 	var t templateRead

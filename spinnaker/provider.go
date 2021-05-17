@@ -1,6 +1,8 @@
 package spinnaker
 
 import (
+	"sync"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/spf13/pflag"
 	gate "github.com/spinnaker/spin/cmd/gateclient"
@@ -47,9 +49,22 @@ func Provider() *schema.Provider {
 	}
 }
 
-type gateConfig struct {
-	server string
+type clientConfig struct {
+	fs     *pflag.FlagSet
+	once   sync.Once
 	client *gate.GatewayClient
+	err    error
+}
+
+// Client lazily initializes a *gate.GatewayClient on the first call and
+// returns it. Subsequent calls return the same client instance. Returns an
+// error if client initialization fails.
+func (c *clientConfig) Client() (*gate.GatewayClient, error) {
+	c.once.Do(func() {
+		c.client, c.err = gate.NewGateClient(c.fs)
+	})
+
+	return c.client, c.err
 }
 
 func providerConfigureFunc(data *schema.ResourceData) (interface{}, error) {
@@ -66,13 +81,6 @@ func providerConfigureFunc(data *schema.ResourceData) (interface{}, error) {
 	flags.String("output", "", "")
 	flags.String("config", config, "")
 	flags.String("default-headers", defaultHeaders, "")
-	// flags.Parse()
-	client, err := gate.NewGateClient(flags)
-	if err != nil {
-		return nil, err
-	}
-	return gateConfig{
-		server: data.Get("server").(string),
-		client: client,
-	}, nil
+
+	return &clientConfig{fs: flags}, nil
 }

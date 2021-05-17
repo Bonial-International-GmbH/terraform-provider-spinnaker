@@ -54,8 +54,13 @@ func resourceApplicationCreate(data *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceApplicationRead(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	applicationName := data.Get("application").(string)
 	var app applicationRead
 	if err := api.GetApplication(client, applicationName, &app); err != nil {
@@ -70,16 +75,26 @@ func resourceApplicationUpdate(data *schema.ResourceData, meta interface{}) erro
 }
 
 func resourceApplicationDelete(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
+
 	applicationName := data.Get("application").(string)
 
 	return api.DeleteAppliation(client, applicationName)
 }
 
 func resourceApplicationExists(data *schema.ResourceData, meta interface{}) (bool, error) {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return false, err
+	}
+
 	applicationName := data.Get("application").(string)
 
 	var app applicationRead
@@ -99,8 +114,12 @@ func resourceApplicationExists(data *schema.ResourceData, meta interface{}) (boo
 }
 
 func upsertApplication(data *schema.ResourceData, meta interface{}) error {
-	clientConfig := meta.(gateConfig)
-	client := clientConfig.client
+	clientConfig := meta.(*clientConfig)
+
+	client, err := clientConfig.Client()
+	if err != nil {
+		return err
+	}
 
 	if err := api.CreateApplication(client, data); err != nil {
 		return err
