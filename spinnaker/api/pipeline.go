@@ -15,7 +15,6 @@ func CreatePipeline(client *gate.GatewayClient, pipeline interface{}) error {
 
 		return nil, resp, err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -35,7 +34,6 @@ func GetPipeline(client *gate.GatewayClient, applicationName, pipelineName strin
 			pipelineName,
 		)
 	})
-
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return jsonMap, fmt.Errorf("%s", ErrCodeNoSuchEntityException)
@@ -67,7 +65,6 @@ func UpdatePipeline(client *gate.GatewayClient, pipelineID string, pipeline inte
 	_, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
 		return client.PipelineControllerApi.UpdatePipelineUsingPUT(client.Context, pipelineID, pipeline)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -88,7 +85,6 @@ func DeletePipeline(client *gate.GatewayClient, applicationName, pipelineName st
 		)
 		return nil, resp, err
 	})
-
 	if err != nil {
 		return err
 	}

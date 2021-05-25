@@ -1,6 +1,6 @@
-module github.com/armory-io/terraform-provider-spinnaker
+module github.com/Bonial-International-GmbH/terraform-provider-spinnaker
 
-go 1.12
+go 1.16
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible

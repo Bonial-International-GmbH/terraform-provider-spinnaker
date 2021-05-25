@@ -40,8 +40,13 @@ func testAccCheckApplicationExists(n string) resource.TestCheckFunc {
 		if rs.Primary.ID == "" {
 			return fmt.Errorf("No Application ID is set")
 		}
-		client := testAccProvider.Meta().(gateConfig).client
-		err := resource.Retry(1*time.Minute, func() *resource.RetryError {
+
+		client, err := testAccProvider.Meta().(*clientConfig).Client()
+		if err != nil {
+			return err
+		}
+
+		err = resource.Retry(1*time.Minute, func() *resource.RetryError {
 			_, resp, err := client.ApplicationControllerApi.GetApplicationUsingGET(client.Context, rs.Primary.ID, nil)
 			if resp != nil {
 				if resp != nil && resp.StatusCode == http.StatusNotFound {

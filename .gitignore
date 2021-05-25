@@ -1,7 +1,4 @@
-.terraform
-*.tfstate*
+/dist
+/vendor
+coverage.txt
 terraform-provider-spinnaker
-*.tf
-*.log
-pipelines
-vendor/*

@@ -1,0 +1,12 @@
+---
+run:
+  deadline: 10m
+
+linters-settings:
+  errcheck:
+    ignore: github.com/hashicorp/terraform-plugin-sdk/helper/schema:Set
+linters:
+  enable:
+    - whitespace
+    - misspell
+    - goimports

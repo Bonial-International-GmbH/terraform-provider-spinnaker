@@ -18,7 +18,6 @@ func CreatePipelineTemplate(client *gate.GatewayClient, template interface{}) er
 
 		return nil, resp, err
 	})
-
 	if err != nil {
 		return err
 	}
@@ -34,7 +33,6 @@ func GetPipelineTemplate(client *gate.GatewayClient, templateID string, dest int
 	successPayload, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
 		return client.PipelineTemplatesControllerApi.GetUsingGET(client.Context, templateID)
 	})
-
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return fmt.Errorf("%s", ErrCodeNoSuchEntityException)
@@ -66,7 +64,6 @@ func DeletePipelineTemplate(client *gate.GatewayClient, templateID string) error
 	_, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
 		return client.PipelineTemplatesControllerApi.DeleteUsingDELETE(client.Context, templateID, nil)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -86,7 +83,6 @@ func UpdatePipelineTemplate(client *gate.GatewayClient, templateID string, templ
 
 		return nil, resp, err
 	})
-
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/armory-io/terraform-provider-spinnaker/spinnaker/api"
+	"github.com/Bonial-International-GmbH/terraform-provider-spinnaker/spinnaker/api"
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
@@ -69,6 +69,7 @@ func resourcePipelineTemplateConfig() *schema.Resource {
 		Read:   resourcePipelineTemplateConfigRead,
 		Update: resourcePipelineTemplateConfigUpdate,
 		Delete: resourcePipelineTemplateConfigDelete,
+		Exists: resourcePipelineTemplateConfigExists,
 	}
 }
 

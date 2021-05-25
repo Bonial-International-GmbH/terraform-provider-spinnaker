@@ -1,6 +1,8 @@
-[![CircleCI](https://circleci.com/gh/armory-io/terraform-provider-spinnaker/tree/master.svg?style=svg)](https://circleci.com/gh/armory-io/terraform-provider-spinnaker/tree/master)
-
 # terraform-provider-spinnaker
+
+[![Build Status](https://github.com/Bonial-International-GmbH/terraform-provider-spinnaker/workflows/build/badge.svg)](https://github.com/Bonial-International-GmbH/terraform-provider-spinnaker/actions?query=workflow%3Abuild)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Bonial-International-GmbH/terraform-provider-spinnaker?style=flat)](https://goreportcard.com/report/github.com/Bonial-International-GmbH/terraform-provider-spinnaker)
+[![GoDoc](https://godoc.org/github.com/Bonial-International-GmbH/terraform-provider-spinnaker?status.svg)](https://godoc.org/github.com/Bonial-International-GmbH/terraform-provider-spinnaker)
 
 Manage [Spinnaker](https://spinnaker.io) applications and pipelines with Terraform.
 

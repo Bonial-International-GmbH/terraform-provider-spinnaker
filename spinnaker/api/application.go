@@ -2,10 +2,11 @@ package api
 
 import (
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 
 	"github.com/mitchellh/mapstructure"
 	gate "github.com/spinnaker/spin/cmd/gateclient"
@@ -55,7 +56,6 @@ func CreateApplication(client *gate.GatewayClient, applicationData *schema.Resou
 	ref, _, err := retry(func() (map[string]interface{}, *http.Response, error) {
 		return client.TaskControllerApi.TaskUsingPOST1(client.Context, createAppTask)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,6 @@ func DeleteAppliation(client *gate.GatewayClient, applicationName string) error 
 	_, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
 		return client.TaskControllerApi.TaskUsingPOST1(client.Context, deleteAppTask)
 	})
-
 	if err != nil {
 		return err
 	}

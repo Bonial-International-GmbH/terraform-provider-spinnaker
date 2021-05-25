@@ -3,7 +3,7 @@ package spinnaker
 import (
 	"strings"
 
-	"github.com/armory-io/terraform-provider-spinnaker/spinnaker/api"
+	"github.com/Bonial-International-GmbH/terraform-provider-spinnaker/spinnaker/api"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
