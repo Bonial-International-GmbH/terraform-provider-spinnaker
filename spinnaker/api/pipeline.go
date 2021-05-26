@@ -11,7 +11,7 @@ import (
 
 func CreatePipeline(client *gate.GatewayClient, pipeline interface{}) error {
 	_, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
-		resp, err := client.PipelineControllerApi.SavePipelineUsingPOST(client.Context, pipeline)
+		resp, err := client.PipelineControllerApi.SavePipelineUsingPOST(client.Context, pipeline, nil)
 
 		return nil, resp, err
 	})

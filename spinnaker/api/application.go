@@ -14,7 +14,7 @@ import (
 
 func GetApplication(client *gate.GatewayClient, applicationName string, dest interface{}) error {
 	app, resp, err := retry(func() (map[string]interface{}, *http.Response, error) {
-		return client.ApplicationControllerApi.GetApplicationUsingGET(client.Context, applicationName, map[string]interface{}{})
+		return client.ApplicationControllerApi.GetApplicationUsingGET(client.Context, applicationName, nil)
 	})
 
 	if resp != nil {

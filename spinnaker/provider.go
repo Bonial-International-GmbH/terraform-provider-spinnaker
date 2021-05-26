@@ -1,11 +1,12 @@
 package spinnaker
 
 import (
+	"os"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"github.com/spf13/pflag"
 	gate "github.com/spinnaker/spin/cmd/gateclient"
+	"github.com/spinnaker/spin/cmd/output"
 )
 
 func Provider() *schema.Provider {
@@ -50,7 +51,11 @@ func Provider() *schema.Provider {
 }
 
 type clientConfig struct {
-	fs     *pflag.FlagSet
+	gateEndpoint     string
+	defaultHeaders   string
+	configLocation   string
+	ignoreCertErrors bool
+
 	once   sync.Once
 	client *gate.GatewayClient
 	err    error
@@ -61,26 +66,25 @@ type clientConfig struct {
 // error if client initialization fails.
 func (c *clientConfig) Client() (*gate.GatewayClient, error) {
 	c.once.Do(func() {
-		c.client, c.err = gate.NewGateClient(c.fs)
+		c.client, c.err = gate.NewGateClient(
+			output.NewUI(true, false, output.MarshalToJson, os.Stdout, os.Stderr),
+			c.gateEndpoint,
+			c.defaultHeaders,
+			c.configLocation,
+			c.ignoreCertErrors,
+		)
 	})
 
 	return c.client, c.err
 }
 
 func providerConfigureFunc(data *schema.ResourceData) (interface{}, error) {
-	server := data.Get("server").(string)
-	config := data.Get("config").(string)
-	ignoreCertErrors := data.Get("ignore_cert_errors").(bool)
-	defaultHeaders := data.Get("default_headers").(string)
+	c := &clientConfig{
+		gateEndpoint:     data.Get("server").(string),
+		defaultHeaders:   data.Get("default_headers").(string),
+		configLocation:   data.Get("config").(string),
+		ignoreCertErrors: data.Get("ignore_cert_errors").(bool),
+	}
 
-	flags := pflag.NewFlagSet("default", 1)
-	flags.String("gate-endpoint", server, "")
-	flags.Bool("quiet", false, "")
-	flags.Bool("insecure", ignoreCertErrors, "")
-	flags.Bool("no-color", true, "")
-	flags.String("output", "", "")
-	flags.String("config", config, "")
-	flags.String("default-headers", defaultHeaders, "")
-
-	return &clientConfig{fs: flags}, nil
+	return c, nil
 }
