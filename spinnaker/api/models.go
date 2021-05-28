@@ -22,8 +22,6 @@ type PipelineTemplateV2Variable struct {
 	Description  *string     `json:"description,omitempty"`
 	DefaultValue interface{} `json:"defaultValue,omitempty"`
 	Type         string      `json:"type"`
-	Group        *string     `json:"group,omitempty"`
-	Example      *string     `json:"example,omitempty"`
 }
 
 type PipelineTemplateV2Version struct {
