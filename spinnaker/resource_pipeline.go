@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Bonial-International-GmbH/terraform-provider-spinnaker/spinnaker/api"
-	"github.com/Bonial-International-GmbH/terraform-provider-spinnaker/spinnaker/api/errors"
+	apierrors "github.com/Bonial-International-GmbH/terraform-provider-spinnaker/spinnaker/api/errors"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -57,11 +57,9 @@ func resourcePipelineCreate(data *schema.ResourceData, meta interface{}) error {
 
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
-	rawPipeline := []byte(data.Get("pipeline").(string))
+	rawPipeline := data.Get("pipeline").(string)
 
-	var pipeline map[string]interface{}
-
-	err = json.Unmarshal(rawPipeline, &pipeline)
+	pipeline, err := parsePipeline(rawPipeline)
 	if err != nil {
 		return err
 	}
@@ -71,12 +69,13 @@ func resourcePipelineCreate(data *schema.ResourceData, meta interface{}) error {
 	delete(pipeline, "id")
 
 	err = api.CreatePipeline(client, pipeline)
-	if errors.IsPipelineAlreadyExists(err) {
+	if apierrors.IsPipelineAlreadyExists(err) {
 		err = api.RecreatePipeline(client, applicationName, pipelineName, pipeline)
 	}
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create pipeline %q for application %q: %w",
+			pipelineName, applicationName, err)
 	}
 
 	return resourcePipelineRead(data, meta)
@@ -94,24 +93,23 @@ func resourcePipelineRead(data *schema.ResourceData, meta interface{}) error {
 	pipelineName := data.Get("name").(string)
 
 	var p pipelineRead
-	jsonMap, err := api.GetPipeline(client, applicationName, pipelineName, &p)
+
+	pipeline, err := api.GetPipeline(client, applicationName, pipelineName, &p)
+	if apierrors.IsNotFound(err) {
+		data.SetId("")
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to fetch pipeline %q for application %q: %w",
+			pipelineName, applicationName, err)
+	}
+
+	encodedPipeline, err := editAndEncodePipeline(pipeline)
 	if err != nil {
 		return err
 	}
 
-	pipeline, err := editAndEncodePipeline(jsonMap)
-	if err != nil {
-		return err
-	}
-	err = data.Set("pipeline", pipeline)
-	if err != nil {
-		return fmt.Errorf("Could not set pipeline for pipeline %s: %s", pipelineName, err)
-	}
-
-	err = data.Set("pipeline_id", p.ID)
-	if err != nil {
-		return fmt.Errorf("Could not set pipeline_id for pipeline %s: %s", pipelineName, err)
-	}
+	data.Set("pipeline", encodedPipeline)
+	data.Set("pipeline_id", p.ID)
 	data.SetId(p.ID)
 
 	return nil
@@ -127,33 +125,28 @@ func resourcePipelineUpdate(data *schema.ResourceData, meta interface{}) error {
 
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
-	rawPipeline := []byte(data.Get("pipeline").(string))
+	pipelineID := data.Get("pipeline_id").(string)
+	rawPipeline := data.Get("pipeline").(string)
 
-	pipelineID, ok := data.GetOk("pipeline_id")
-	if !ok {
-		return fmt.Errorf("No pipeline_id found to pipeline in %s with name %s", applicationName, pipelineName)
-	}
-
-	var pipeline map[string]interface{}
-
-	err = json.Unmarshal(rawPipeline, &pipeline)
+	pipeline, err := parsePipeline(rawPipeline)
 	if err != nil {
-		return fmt.Errorf("could not unmarshal pipeline")
+		return err
 	}
 
 	pipeline["application"] = applicationName
 	pipeline["name"] = pipelineName
-	pipeline["id"] = pipelineID.(string)
+	pipeline["id"] = pipelineID
 
-	err = api.UpdatePipeline(client, pipelineID.(string), pipeline)
-	if errors.IsPipelineAlreadyExists(err) {
+	err = api.UpdatePipeline(client, pipelineID, pipeline)
+	if apierrors.IsPipelineAlreadyExists(err) {
 		// Although it seems odd, this error can happen here due to the hideous
 		// spinnaker API. We handle it by just recreating the pipeline.
 		err = api.RecreatePipeline(client, applicationName, pipelineName, pipeline)
 	}
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update pipeline %q for application %q: %w",
+			pipelineName, applicationName, err)
 	}
 
 	return resourcePipelineRead(data, meta)
@@ -170,8 +163,10 @@ func resourcePipelineDelete(data *schema.ResourceData, meta interface{}) error {
 	applicationName := data.Get("application").(string)
 	pipelineName := data.Get("name").(string)
 
-	if err := api.DeletePipeline(client, applicationName, pipelineName); err != nil {
-		return err
+	err = api.DeletePipeline(client, applicationName, pipelineName)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to delete pipeline %q for application %q: %w",
+			pipelineName, applicationName, err)
 	}
 
 	return nil
@@ -189,12 +184,16 @@ func resourcePipelineExists(data *schema.ResourceData, meta interface{}) (bool, 
 	pipelineName := data.Get("name").(string)
 
 	var p pipelineRead
-	if _, err := api.GetPipeline(client, applicationName, pipelineName, &p); err != nil && !strings.Contains(err.Error(), "EOF") {
-		return false, err
-	}
 
-	if p.Name == "" {
-		return false, nil
+	_, err = api.GetPipeline(client, applicationName, pipelineName, &p)
+	if err != nil {
+		// Weird error case: sometimes spinnaker returns an EOF error for non-existing pipelines.
+		if apierrors.IsNotFound(err) || strings.Contains(err.Error(), "EOF") {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("failed to fetch pipeline %q for application %q: %w",
+			pipelineName, applicationName, err)
 	}
 
 	return true, nil
@@ -217,37 +216,39 @@ func pipelineDiffSuppressFunc(k, old, new string, d *schema.ResourceData) bool {
 	return editedOld == editedNew
 }
 
-func decodeEditAndEncodePipeline(pipeline string) (encodedPipeline string, err error) {
-	// Decode the pipeline into a map we can edit
-	pipelineBytes := []byte(pipeline)
-	var pipelineMapGeneric interface{}
-	err = json.Unmarshal(pipelineBytes, &pipelineMapGeneric)
-	if err != nil {
-		return
+func parsePipeline(rawPipeline string) (map[string]interface{}, error) {
+	var pipeline map[string]interface{}
+
+	if err := json.Unmarshal([]byte(rawPipeline), &pipeline); err != nil {
+		return nil, fmt.Errorf("invalid pipeline json: %w", err)
 	}
 
-	pipelineMap := pipelineMapGeneric.(map[string]interface{})
-
-	return editAndEncodePipeline(pipelineMap)
+	return pipeline, nil
 }
 
-func editAndEncodePipeline(pipelineMap map[string]interface{}) (encodedPipeline string, err error) {
-	// Remove the keys we know are problematic because they are managed
-	// by spinnaker or are handled by other schema attributes.
-	delete(pipelineMap, "application")
-	delete(pipelineMap, "lastModifiedBy")
-	delete(pipelineMap, "id")
-	delete(pipelineMap, "index")
-	delete(pipelineMap, "name")
-	delete(pipelineMap, "updateTs")
-
-	// Encode the pipeline into a single string
-	// This will sort all keys, etc.
-	editedPipelineBytes, err := json.Marshal(pipelineMap)
+func decodeEditAndEncodePipeline(rawPipeline string) (string, error) {
+	pipeline, err := parsePipeline(rawPipeline)
 	if err != nil {
-		return
+		return "", err
 	}
 
-	encodedPipeline = string(editedPipelineBytes)
-	return
+	return editAndEncodePipeline(pipeline)
+}
+
+func editAndEncodePipeline(pipeline map[string]interface{}) (string, error) {
+	// Remove the keys we know are problematic because they are managed
+	// by spinnaker or are handled by other schema attributes.
+	delete(pipeline, "application")
+	delete(pipeline, "lastModifiedBy")
+	delete(pipeline, "id")
+	delete(pipeline, "index")
+	delete(pipeline, "name")
+	delete(pipeline, "updateTs")
+
+	encoded, err := json.Marshal(pipeline)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal pipeline: %w", err)
+	}
+
+	return string(encoded), nil
 }

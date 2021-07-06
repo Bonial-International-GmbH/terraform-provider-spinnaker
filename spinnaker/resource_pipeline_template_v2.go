@@ -87,7 +87,10 @@ func resourcePipelineTemplateV2Read(data *schema.ResourceData, meta interface{})
 	templateID := data.Get("template_id").(string)
 
 	template, err := api.GetPipelineTemplateV2(client, templateID)
-	if err != nil {
+	if apierrors.IsNotFound(err) {
+		data.SetId("")
+		return nil
+	} else if err != nil {
 		return fmt.Errorf("failed to fetch pipeline template %q: %w", templateID, err)
 	}
 
